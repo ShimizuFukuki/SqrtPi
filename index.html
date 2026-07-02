@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>失敗した</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>失敗した · 無限</title>
     <style>
         /* ===== 全局重置 ===== */
         * {
@@ -15,173 +15,296 @@
         html,
         body {
             width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #000;
-        }
-
-        /* ===== 网格容器 ===== */
-        #grid {
-            display: flex;
-            flex-wrap: wrap;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            align-content: flex-start;
-        }
-
-        /* ===== 每个格子 ===== */
-        .cell {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            min-height: 100vh;
+            background: #0a0a0a;
             font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo',
                 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ===== 主容器 ===== */
+        #fail-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 8px;
+            gap: 4px 6px;
+            min-height: 100vh;
+            width: 100%;
+            background: radial-gradient(ellipse at 30% 20%, #1a0505, #0a0a0a 70%);
+        }
+
+        /* ===== 每个竖排文字块 ===== */
+        .fail-block {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            writing-mode: vertical-rl;
+            letter-spacing: 0.04em;
+            line-height: 1.2;
             font-weight: 900;
             color: #ff1744;
-            text-shadow:
-                0 0 10px rgba(255, 23, 68, 0.4),
-                0 0 30px rgba(255, 23, 68, 0.15);
+            text-shadow: 0 0 6px rgba(255, 23, 68, 0.25), 0 0 20px rgba(255, 23, 68, 0.08);
+            transition: all 0.25s ease;
             user-select: none;
             -webkit-user-select: none;
-            /* 防止文字被选中 */
-            transition: color 0.2s ease;
-            will-change: transform;
+            cursor: default;
+            flex-shrink: 0;
+            will-change: transform, color, text-shadow;
         }
 
-        /* ===== 鼠标悬停时变亮 ===== */
-        .cell:hover {
+        .fail-block:hover {
             color: #ff6b8a;
             text-shadow:
-                0 0 20px rgba(255, 23, 68, 0.8),
-                0 0 60px rgba(255, 23, 68, 0.3);
-            z-index: 1;
+                0 0 16px rgba(255, 23, 68, 0.7),
+                0 0 50px rgba(255, 23, 68, 0.25),
+                0 0 90px rgba(255, 23, 68, 0.10);
+            transform: scale(1.08) rotate(0deg) !important;
+            z-index: 10;
+            transition: all 0.15s ease;
         }
 
-        /* ===== 滚动条隐藏 ===== */
+        /* ===== 故障闪烁动画（部分块） ===== */
+        .fail-block.glitch {
+            animation: glitchFlicker 3.2s infinite alternate;
+        }
+        @keyframes glitchFlicker {
+            0% {
+                opacity: 0.85;
+                text-shadow: 0 0 4px rgba(255, 23, 68, 0.2);
+            }
+            30% {
+                opacity: 1;
+                text-shadow: 0 0 12px rgba(255, 23, 68, 0.4), 0 0 30px rgba(255, 0, 0, 0.1);
+            }
+            70% {
+                opacity: 0.92;
+                text-shadow: 0 0 8px rgba(255, 23, 68, 0.3);
+            }
+            100% {
+                opacity: 0.7;
+                text-shadow: 0 0 2px rgba(255, 23, 68, 0.15);
+            }
+        }
+
+        /* ===== 滚动条暗色 ===== */
         ::-webkit-scrollbar {
-            display: none;
+            width: 8px;
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a1a1a;
+            border-radius: 4px;
+            border: 1px solid #1a0a0a;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a2a2a;
+        }
+
+        @media (max-width: 600px) {
+            #fail-container {
+                padding: 4px;
+                gap: 2px 4px;
+            }
+        }
+        @media (max-width: 400px) {
+            #fail-container {
+                padding: 2px;
+                gap: 1px 3px;
+            }
+        }
+
+        /* ===== 加载提示（可选） ===== */
+        #loading-marker {
+            width: 100%;
+            text-align: center;
+            color: #3a1a1a;
+            font-size: 14px;
+            padding: 20px 0;
+            font-weight: 300;
+            letter-spacing: 2px;
+            opacity: 0.5;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <!-- ===== 网格容器 ===== -->
-    <div id="grid"></div>
+    <div id="fail-container"></div>
 
     <script>
         (function() {
             'use strict';
 
-            const grid = document.getElementById('grid');
+            const container = document.getElementById('fail-container');
 
-            /**
-             * 生成铺满屏幕的网格
-             */
-            function buildGrid() {
-                // 清空容器
-                grid.innerHTML = '';
+            // ---------- 工具函数 ----------
+            const rand = (min, max) => Math.random() * (max - min) + min;
+            const randInt = (min, max) => Math.floor(rand(min, max + 1));
 
-                // 获取视口尺寸
+            // ---------- 生成一个带有随机样式的文字块 ----------
+            function createFailBlock() {
+                const block = document.createElement('div');
+                block.className = 'fail-block';
+                block.textContent = '失敗した';
+
+                // ---- 随机样式 ----
+                let fontSize;
+                const r = Math.random();
+                if (r < 0.05) {
+                    fontSize = rand(50, 72);
+                } else if (r < 0.15) {
+                    fontSize = rand(14, 22);
+                } else {
+                    fontSize = rand(22, 48);
+                }
+                block.style.fontSize = fontSize + 'px';
+
+                const alpha = rand(0.35, 1.0);
+                const g = Math.floor(rand(10, 60));
+                const b = Math.floor(rand(10, 60));
+                block.style.color = `rgba(255, ${g}, ${b}, ${alpha})`;
+
+                const shadowIntensity = alpha * 0.6 + 0.1;
+                block.style.textShadow = `
+                        0 0 ${rand(4, 18)}px rgba(255, 23, 68, ${shadowIntensity * 0.3}),
+                        0 0 ${rand(20, 60)}px rgba(255, 23, 68, ${shadowIntensity * 0.08})
+                    `;
+
+                const padX = rand(6, 24);
+                const padY = rand(4, 18);
+                block.style.padding = `${padY}px ${padX}px`;
+
+                let rotate = rand(-3.5, 3.5);
+                if (Math.random() < 0.08) rotate = rand(-6, 6);
+                block.style.transform = `rotate(${rotate}deg)`;
+
+                block.style.marginTop = rand(-8, 14) + 'px';
+                block.style.marginLeft = rand(-4, 6) + 'px';
+                block.style.marginRight = rand(-4, 6) + 'px';
+
+                if (Math.random() < 0.12) {
+                    block.classList.add('glitch');
+                    block.style.animationDuration = rand(2.2, 5.0) + 's';
+                }
+
+                if (Math.random() < 0.02) {
+                    block.style.filter = 'blur(0.6px)';
+                }
+                if (Math.random() < 0.03) {
+                    block.style.filter = (block.style.filter || '') + ' brightness(0.7)';
+                }
+
+                return block;
+            }
+
+            // ---------- 批量生成并追加到容器 ----------
+            function appendBlocks(count) {
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < count; i++) {
+                    fragment.appendChild(createFailBlock());
+                }
+                container.appendChild(fragment);
+            }
+
+            // ---------- 计算初始需要多少块才能填满视口 ----------
+            function getInitialBlockCount() {
+                // 估算：每个块平均宽度约 80px，高度约 120px（含间距）
+                // 但为保险，直接生成一个测试块测量
+                const testBlock = createFailBlock();
+                container.appendChild(testBlock);
+                const rect = testBlock.getBoundingClientRect();
+                const w = rect.width + 10; // 加上间隙
+                const h = rect.height + 10;
+                testBlock.remove();
+
                 const vw = window.innerWidth;
                 const vh = window.innerHeight;
-
-                // ---- 计算每行放多少个 ----
-                // 基准尺寸：在 1920px 宽下约 140px，按比例缩放
-                let baseSize = Math.max(70, Math.min(160, vw / 14));
-                // 小屏幕适配
-                if (vw < 600) baseSize = Math.max(60, vw / 8);
-                if (vw < 400) baseSize = Math.max(50, vw / 7);
-
-                // 计算列数 & 行数（向上取整保证铺满）
-                const cols = Math.ceil(vw / baseSize);
-                const rows = Math.ceil(vh / baseSize);
-                const total = cols * rows;
-
-                // 实际每个格子的宽高（正好铺满，无空隙）
-                const cellWidth = vw / cols;
-                const cellHeight = vh / rows;
-
-                // 字体大小：取格子较小边的 22% ~ 28%，并限制范围
-                let fontSize = Math.min(cellWidth, cellHeight) * 0.26;
-                fontSize = Math.max(14, Math.min(48, fontSize));
-
-                // ---- 生成格子 ----
-                // 使用 DocumentFragment 批量添加，提升性能
-                const fragment = document.createDocumentFragment();
-
-                for (let i = 0; i < total; i++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    cell.textContent = '失敗した';
-
-                    // 尺寸
-                    cell.style.width = cellWidth + 'px';
-                    cell.style.height = cellHeight + 'px';
-                    cell.style.fontSize = fontSize + 'px';
-
-                    // 小屏设备适当调小字重，避免渲染过重
-                    if (vw < 600) {
-                        cell.style.fontWeight = '800';
-                    }
-
-                    // 微小的随机颜色偏移（红色系内变化），让页面更丰富
-                    // 但保持整体红色调，偏移量很小
-                    const r = 255;
-                    const g = Math.floor(Math.random() * 40) + 10; // 10~50
-                    const b = Math.floor(Math.random() * 40) + 10; // 10~50
-                    // 只在悬停时使用随机色？不，这里直接给每个格子一个细微差异
-                    // 但为了保持统一感，还是统一使用 #ff1744，用悬停来展示变化
-                    // 这里不做随机颜色，保持统一
-
-                    // 添加一个非常轻微的随机旋转（-1deg ~ 1deg），增加生动感
-                    // 但会破坏整齐感，所以不开启
-                    // const rotate = (Math.random() - 0.5) * 2;
-                    // cell.style.transform = `rotate(${rotate}deg)`;
-
-                    fragment.appendChild(cell);
-                }
-
-                grid.appendChild(fragment);
+                const cols = Math.ceil(vw / w);
+                const rows = Math.ceil(vh / h);
+                // 多生成两行保证填满并有余量
+                return cols * (rows + 2) + 20;
             }
 
-            // ---- 防抖 ----
-            let resizeTimer = null;
+            // ---------- 状态 ----------
+            let isLoading = false; // 防止重复加载
+            const BATCH_SIZE = 30; // 每次滚动追加的数量
 
-            function debouncedResize() {
-                if (resizeTimer) {
-                    cancelAnimationFrame(resizeTimer);
-                    resizeTimer = null;
+            // ---------- 滚动监听：无限追加 ----------
+            function handleScroll() {
+                if (isLoading) return;
+
+                const scrollTop = window.scrollY || window.pageYOffset || 0;
+                const clientHeight = window.innerHeight;
+                const scrollHeight = document.documentElement.scrollHeight;
+
+                // 当滚动距离底部小于 300px 时触发加载
+                if (scrollTop + clientHeight >= scrollHeight - 300) {
+                    isLoading = true;
+                    // 使用 requestAnimationFrame 避免频繁触发
+                    requestAnimationFrame(() => {
+                        appendBlocks(BATCH_SIZE);
+                        isLoading = false;
+                        // 触发后再次检查是否仍需要追加（可能一次追加不够）
+                        // 但为了防止无限循环，让下一次滚动事件继续触发
+                    });
                 }
-                resizeTimer = requestAnimationFrame(() => {
-                    buildGrid();
-                    resizeTimer = null;
+            }
+
+            // ---------- 防抖 + 节流 ----------
+            let ticking = false;
+            function onScroll() {
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        handleScroll();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }
+
+            // ---------- 初始化 ----------
+            function init() {
+                // 清空容器
+                container.innerHTML = '';
+                // 生成初始块（填满视口并多出一些）
+                const initialCount = getInitialBlockCount();
+                appendBlocks(initialCount);
+                console.log(`💀 初期生成 ${initialCount} 個`);
+
+                // 绑定滚动事件
+                window.addEventListener('scroll', onScroll, { passive: true });
+                window.addEventListener('resize', () => {
+                    // 如果视口变大导致底部空白，可以触发一次加载
+                    // 但简单起见，用户滚动时会自动补
                 });
+
+                // 键盘 R 重建（保留）
+                document.addEventListener('keydown', (e) => {
+                    if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        container.innerHTML = '';
+                        const count = getInitialBlockCount();
+                        appendBlocks(count);
+                        console.log(`♻️ 再構築: ${count} 個`);
+                        window.scrollTo(0, 0);
+                    }
+                });
+
+                console.log('📜 無限スクロール — 永遠に「失敗」が続きます');
+                console.log('🔄 [R] キーで再生成');
             }
 
-            // ---- 初始生成 ----
-            buildGrid();
+            // 等 DOM 完全加载后执行
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
 
-            // ---- 监听窗口变化 ----
-            window.addEventListener('resize', debouncedResize);
-
-            // ---- 窗口方向变化（移动端） ----
-            window.addEventListener('orientationchange', () => {
-                // 延迟执行，等待布局稳定
-                setTimeout(debouncedResize, 300);
-            });
-
-            // ---- 页面可见性变化时刷新（切到后台再回来） ----
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) {
-                    debouncedResize();
-                }
-            });
-
-            // ---- 打印日志（方便调试） ----
-            console.log('💀 失敗した — 满屏已加载');
-            console.log(`📐 视口: ${window.innerWidth}×${window.innerHeight}`);
         })();
     </script>
 
