@@ -1,1 +1,189 @@
-失敗した
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>失敗した</title>
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* ===== 网格容器 ===== */
+        #grid {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            align-content: flex-start;
+        }
+
+        /* ===== 每个格子 ===== */
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo',
+                'Microsoft YaHei', 'PingFang SC', sans-serif;
+            font-weight: 900;
+            color: #ff1744;
+            text-shadow:
+                0 0 10px rgba(255, 23, 68, 0.4),
+                0 0 30px rgba(255, 23, 68, 0.15);
+            user-select: none;
+            -webkit-user-select: none;
+            /* 防止文字被选中 */
+            transition: color 0.2s ease;
+            will-change: transform;
+        }
+
+        /* ===== 鼠标悬停时变亮 ===== */
+        .cell:hover {
+            color: #ff6b8a;
+            text-shadow:
+                0 0 20px rgba(255, 23, 68, 0.8),
+                0 0 60px rgba(255, 23, 68, 0.3);
+            z-index: 1;
+        }
+
+        /* ===== 滚动条隐藏（保险） ===== */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 网格容器 ===== -->
+    <div id="grid"></div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            const grid = document.getElementById('grid');
+
+            /**
+             * 生成铺满屏幕的网格
+             */
+            function buildGrid() {
+                // 清空容器
+                grid.innerHTML = '';
+
+                // 获取视口尺寸
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+
+                // ---- 计算每行放多少个 ----
+                // 基准尺寸：在 1920px 宽下约 140px，按比例缩放
+                let baseSize = Math.max(70, Math.min(160, vw / 14));
+                // 小屏幕适配
+                if (vw < 600) baseSize = Math.max(60, vw / 8);
+                if (vw < 400) baseSize = Math.max(50, vw / 7);
+
+                // 计算列数 & 行数（向上取整保证铺满）
+                const cols = Math.ceil(vw / baseSize);
+                const rows = Math.ceil(vh / baseSize);
+                const total = cols * rows;
+
+                // 实际每个格子的宽高（正好铺满，无空隙）
+                const cellWidth = vw / cols;
+                const cellHeight = vh / rows;
+
+                // 字体大小：取格子较小边的 22% ~ 28%，并限制范围
+                let fontSize = Math.min(cellWidth, cellHeight) * 0.26;
+                fontSize = Math.max(14, Math.min(48, fontSize));
+
+                // ---- 生成格子 ----
+                // 使用 DocumentFragment 批量添加，提升性能
+                const fragment = document.createDocumentFragment();
+
+                for (let i = 0; i < total; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = '失敗した';
+
+                    // 尺寸
+                    cell.style.width = cellWidth + 'px';
+                    cell.style.height = cellHeight + 'px';
+                    cell.style.fontSize = fontSize + 'px';
+
+                    // 小屏设备适当调小字重，避免渲染过重
+                    if (vw < 600) {
+                        cell.style.fontWeight = '800';
+                    }
+
+                    // 微小的随机颜色偏移（红色系内变化），让页面更丰富
+                    // 但保持整体红色调，偏移量很小
+                    const r = 255;
+                    const g = Math.floor(Math.random() * 40) + 10; // 10~50
+                    const b = Math.floor(Math.random() * 40) + 10; // 10~50
+                    // 只在悬停时使用随机色？不，这里直接给每个格子一个细微差异
+                    // 但为了保持统一感，还是统一使用 #ff1744，用悬停来展示变化
+                    // 这里不做随机颜色，保持统一
+
+                    // 添加一个非常轻微的随机旋转（-1deg ~ 1deg），增加生动感
+                    // 但会破坏整齐感，所以不开启
+                    // const rotate = (Math.random() - 0.5) * 2;
+                    // cell.style.transform = `rotate(${rotate}deg)`;
+
+                    fragment.appendChild(cell);
+                }
+
+                grid.appendChild(fragment);
+            }
+
+            // ---- 防抖 ----
+            let resizeTimer = null;
+
+            function debouncedResize() {
+                if (resizeTimer) {
+                    cancelAnimationFrame(resizeTimer);
+                    resizeTimer = null;
+                }
+                resizeTimer = requestAnimationFrame(() => {
+                    buildGrid();
+                    resizeTimer = null;
+                });
+            }
+
+            // ---- 初始生成 ----
+            buildGrid();
+
+            // ---- 监听窗口变化 ----
+            window.addEventListener('resize', debouncedResize);
+
+            // ---- 窗口方向变化（移动端） ----
+            window.addEventListener('orientationchange', () => {
+                // 延迟执行，等待布局稳定
+                setTimeout(debouncedResize, 300);
+            });
+
+            // ---- 页面可见性变化时刷新（切到后台再回来） ----
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    debouncedResize();
+                }
+            });
+
+            // ---- 打印日志（方便调试） ----
+            console.log('💀 失敗した — 满屏已加载');
+            console.log(`📐 视口: ${window.innerWidth}×${window.innerHeight}`);
+        })();
+    </script>
+
+</body>
+</html>
